@@ -464,15 +464,15 @@ def main():
                                                           parsed.critical,
                                                           parsed.cleanup_time)
 
-            time_delta_received = state_received[1] - time_send
-
             # TODO: Refactor
             if (state_received[0] == STATUS_CRITICAL):
                 plugin_exit('Email cloud not be fetched', STATUS_CRITICAL)
             elif (state_received[0] == STATUS_WARNING):
+                time_delta_received = state_received[1] - time_send
                 pluginoutput = '%s took %ds to receive mail' % (conn_remote_imap.host, time_delta_received)
                 state_remote_imap = STATUS_WARNING
             elif (state_received[0] == STATUS_OK):
+                time_delta_received = state_received[1] - time_send
                 state_remote_imap = STATUS_OK
 
             if parsed.echo_reply is False:
@@ -507,17 +507,18 @@ def main():
                                                                parsed.critical_reply,
                                                                parsed.cleanup_time)
 
-                    time_delta_reply = state_reply[1] - state_received[1]
-                    time_delta_loop = time_delta_received + time_delta_reply
-
                     # TODO: Refactor
                     if (state_reply[0] == STATUS_CRITICAL):
                         plugin_exit('Reply email cloud not be fetched',
                                     STATUS_CRITICAL)
                     elif (state_reply[0] == STATUS_WARNING):
+                        time_delta_reply = state_reply[1] - state_received[1]
+                        time_delta_loop = time_delta_received + time_delta_reply
                         pluginoutput = '%s took %ds to reply' % (conn_remote_imap.host, time_delta_reply)
                         state_reply_imap = STATUS_WARNING
                     elif (state_reply[0] == STATUS_OK):
+                        time_delta_reply = state_reply[1] - state_received[1]
+                        time_delta_loop = time_delta_received + time_delta_reply
                         state_reply_imap = STATUS_OK
                         if state_remote_imap is not STATUS_WARNING:
                             pluginoutput += "Email loop took %ds" % time_delta_loop
