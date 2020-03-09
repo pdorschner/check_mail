@@ -45,26 +45,26 @@ The plugin offers an `cleanup`option to delete the send mails and reply messages
                      [--cleanup_time CLEANUP_TIME] [--reply_name REPLY_NAME]
 
 ## Email loop example with cleanup
-	./check_mail.py -sh='exchange.int.netways.de' \
+	./check_mail.py -sh='mail.example.com' \
 			-sp=587 \
-			-susr='NETWAYS\xxx' 
-			-spw='xxx' \
-			-send='philipp.dorschner@netways.de' \
-			-ih='imap.gmx.net' \
+			-susr='DOMAIN\User' \
+			-spw='***' \
+			--sender='sender@example.com' \
+			-ih='imap.example.com' \
 			-ip=993 \
-			-iusr='test@gmx.de' \
+			-iusr='receiver@example.com' \
 			-ipw='xxx'\
-			-rec='test@gmx.de' \
-			-if='Monitoring' \
+			--receiver='receiver@example.com' \
+			--imap_mailbox='Monitoring' \
 			-w=300 \
 			-c=500 \
 			--echo_reply \
-			--imapSenderHost='exchange.int.netways.de' \
-			--imapSenderPort=993 \
-			--imapSenderUser='NETWAYS\xxx' \
-			--imapSenderPassword='xxx'
-			--imapSenderFolder='Monitoring'
-			--replyName='philipp.dorsch'
+			--imap_sender_host='imap.sender.example.com' \
+			--imap_sender_port=993 \
+			--imap_sender_user='DOMAIN\User' \
+			--imap_sender_password='***' \
+			--imap_sender_mailbox='Monitoring' \
+			--reply_name='Echo Notify' \
 			--warning_reply=300 \
 			--critical_reply=500 \
 			--cleanup \
@@ -74,20 +74,20 @@ The plugin offers an `cleanup`option to delete the send mails and reply messages
 	OK - check_email: Email loop took 7s|'receive'=3 'reply'=4 'loop'=7
 
 ## Standalone example without cleanup
-	./check_mail.py -sh='exchange.int.netways.de' \
+	./check_mail.py -sh='mail.example.com' \
 			-sp=587 \
-			-susr='NETWAYS\xxx' 
-			-spw='xxx' \
-			-send='philipp.dorschner@netways.de' \
-			-ih='imap.gmx.net' \
+			-susr='DOMAIN\User' \
+			-spw='***' \
+			--sender='sender@example.com' \
+			-ih='imap.example.com' \
 			-ip=993 \
-			-iusr='test@gmx.de' \
-			-ipw='xxx'\
-			-rec='test@gmx.de' \
-			-if='Monitoring' \
+			-iusr='receiver@example.de' \
+			-ipw='***' \
+			--receiver='receiver@example.de' \
+			--imap_mailbox='Monitoring' \
 			-w=300 \
 			-c=500
 
 ### Output - Standalone example without cleanup
-	OK - check_email: imap.gmx.net - Email received in 3s|'receive'=3
+	OK - check_email: imap.example.com - Email received in 3s|'receive'=3
 					
