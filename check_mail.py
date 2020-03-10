@@ -285,14 +285,14 @@ def parse_arguments():
                         dest='receiver')
 
     parser.add_argument('--warning', '-w',
-                        help='The value of warning threshold in seconds default: 300s',
+                        help='The value of warning threshold in seconds default: 300',
                         type=int,
                         # default=300,
                         required=True,
                         dest='warning')
 
     parser.add_argument('--critical', '-c',
-                        help='The value of critical threshold in seconds default: 500s',
+                        help='The value of critical threshold in seconds default: 500',
                         type=int,
                         # default=500,
                         required=True,
@@ -301,27 +301,27 @@ def parse_arguments():
     reply_group = parser.add_argument_group('If an echo reply is configured on the receiver mail server')
 
     reply_group.add_argument('--echo_reply',
-                             help='Checks for echo reply from mail server default: False',
+                             help='Checks for echo reply from mail server, default: False',
                              default=False,
                              action='store_true',
                              dest='echo_reply')
 
     reply_group.add_argument('--imap_sender_host',
-                             help='The host address or FQDN of the IMAP server which send the mail',
+                             help='The host address or FQDN of the IMAP server which sent the mail',
                              dest='imap_sender_host')
 
     reply_group.add_argument('--imap_sender_port',
-                             help='The port of the IMAP server which send the mail',
+                             help='The port of the IMAP server which sent the mail',
                              type=int,
                              dest='imap_sender_port')
 
     reply_group.add_argument('--imap_sender_user',
-                             help='The username for IMAP, who receive the echo reply default:(env IMAP_SENDER_USER)',
+                             help='The username for IMAP, which receive the echo reply, default:(env IMAP_SENDER_USER)',
                              dest='imap_sender_user',
                              default=os.getenv('IMAP_SENDER_USER'))
 
     reply_group.add_argument('--imap_sender_password',
-                             help='The password for IMAP user, who receive the echo reply default:(env IMAP_SENDER_PASSWORD',
+                             help='The password for IMAP user, which receive the echo reply, default:(env IMAP_SENDER_PASSWORD)',
                              dest='imap_sender_password',
                              default=os.getenv('IMAP_SENDER_PASSWORD'))
 
@@ -339,22 +339,22 @@ def parse_arguments():
                              type=int,
                              dest='warning_reply')
 
-    cleanup_group = parser.add_argument_group('Use these arguments to cleanup send mails/echo replys')
+    cleanup_group = parser.add_argument_group('Use these arguments to cleanup sent mails/echo replys')
 
     cleanup_group.add_argument('--cleanup',
-                               help='Deletes old mails default: False',
+                               help='Deletes old mails, default: False',
                                default=False,
                                action='store_true',
                                dest='cleanup')
 
     cleanup_group.add_argument('--cleanup_time',
-                               help='Deletes mails older then x seconds default: 3600s',
+                               help='Deletes mails older then x seconds, default: 3600',
                                type=int,
                                default=3600,
                                dest='cleanup_time')
 
     cleanup_group.add_argument('--reply_name',
-                               help='Specifies the name the of the reply, e.g. "My Echo"',
+                               help='Specifies the name the of the echo reply, e.g. "My Echo"',
                                dest='reply_name')
 
     args = parser.parse_args()
