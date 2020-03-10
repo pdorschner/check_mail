@@ -7,10 +7,10 @@ Check_email offers three modes:
 
 ## Standard
 In the standard mode *(default)*, the plugin sends an email with an unique (hash) subject and *X-Custom-Tag*, via SMTP, to the specified email-address. Afterwards the plugin connects via IMAP to the given mail account and searches in the given mailbox for the before sent email. Dependent on the thresholds, the plugin searches through the mailbox until the critical threshold is exceeded.<br>
-The required arguemnts are:<br>
+The required arguments are:<br>
       `--imap_host` `--imap_port` `--imap_user` `--imap_password` `--imap_mailbox`<br>
       `--smtp_host` `--smtp_port` `--smtp_user` `--smtp_password` `--sender` `--receiver`<br>
-      `--critical`  `--warning`
+      `--critical`   `--warning`
 
 ## Echo reply
 The *--echo_reply* mode extends the standard mode to search for an *echo-mail*. The plugin assumes that an *echo-mail* will be automatically sent from a mail server, to inform the sender of the previous sent email that the email has been delivered. Therefore, the plugin searches for this specified *echo-mail* in the mailbox of the sender account via IMAP. Usually the *echo-mail* subject contains the same subject as the previous sent email e.g.: “RE: Subject” 
@@ -19,7 +19,7 @@ The *--echo_reply* mode extends the standard mode to search for an *echo-mail*. 
 The additional required arguments are:<br>
       `--echo_reply`<br>
       `--imap_sender_host` `--imap_sender_port` `--imap_sender_user` `--imap_sender_password` `--imap_sender_mailbox`<br>
-      `--critical_reply`   `--warning_reply`
+      `--critical_reply`     `--warning_reply`
 
 ## Clean up
 In order to avoid a full mailbox of *echo-mails* and *check-mails*, there is an option *--cleanup* to sweep away the previous mentioned emails.
@@ -27,7 +27,7 @@ In order to avoid a full mailbox of *echo-mails* and *check-mails*, there is an 
 
 The additional required arguments are:<br>
       `--cleanup`<br>
-      `--cleanup_time`
+      `--cleanup_time`<br>
       `--reply_name`
 
 ### Optional: environment variables
@@ -116,8 +116,16 @@ Check_email can gather these following environment variables from the system if 
 
 ### Output - Email loop example with cleanup
 	OK - check_email: Email loop took 7s|'receive'=3 'reply'=4 'loop'=7
->The *sent-mail* and *echo-mail* was found and the plugin returns OK. Additionally, the duration how long this action took will be served as *perfdata*.
+>The *sent-mail* and *echo-mail* was found and the plugin returns OK. Additionally, the duration how long each action took will be served as *perfdata*.<br>
+
 >NOTE: The output will be always the *highest* state, e.g.: *receive* is WARNING and *reply* is OK, the plugin output will be WARNING. 
 
+## Configuration
+### Icinga 
+**IMPORTANT**
+It is necessary to set the `check_timeout` always greater than the `critical threshold` because the *default timeout* of a plugin could be exceeded and icinga kills its process. As a result, the plugin can never reach the *critical* state.
+Moreover `check_interval` has also to be lower than the `check_timeout`. Due to the fact, that the plugin *waits* for an email or rather an event, the execution time could be, in the worst case, higher than the `check_interval`. In such circumstances Icinga triggers *check_email* anew, even if the plugin did not finish correctly.
+>See *check_email.conf* for an example configuration
 
-					
+### Mail server
+It is recommended to configure rules to manage emails from this plugin. By using a rule, any received email message that match conditions specified in the rule can be automatically forwarded or redirected to another mailbox (**of the same account!**). This is very useful, since the plugin searches through a given mailbox it could be a negative impact if the specified mailbox is bulging with other mails, which also be evaluated.
