@@ -214,6 +214,7 @@ class SmtpConnection(object):
 
 
 def parse_arguments():
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-V', '--version',
@@ -234,15 +235,17 @@ def parse_arguments():
 
     parser.add_argument('--smtp_user', '-susr',
                         help='The username for SMTP default: (env SMTP_USERNAME)',
-                        # required=True,
-                        dest='smtp_user',
-                        default=os.getenv('SMTP_USERNAME'))
+                        required=not os.getenv('SMTP_USERNAME'),
+                        default=os.getenv('SMTP_USERNAME'),
+                        dest='smtp_user'
+                        )
 
     parser.add_argument('--smtp_password', '-spw',
                         help='The password for SMTP default: (env SMTP_PASSWORD)',
-                        # required=True,
+                        required= not os.getenv('SMTP_PASSWORD'),
+                        default=os.getenv('SMTP_PASSWORD'),
                         dest='smtp_password',
-                        default=os.getenv('SMTP_PASSWORD'))
+                        )
 
     parser.add_argument('--imap_host', '-ih',
                         help='The host address or FQDN of the IMAP server',
@@ -257,16 +260,17 @@ def parse_arguments():
 
     parser.add_argument('--imap_user', '-iusr',
                         help='The username for IMAP default: (env IMAP_USERNAME)',
-                        # required=True,
+                        required=not os.getenv('IMAP_USERNAME'),
+                        default=os.getenv('IMAP_USERNAME'),
                         dest='imap_user',
-                        default=os.getenv('IMAP_USERNAME')
                         )
 
     parser.add_argument('--imap_password', '-ipw',
                         help='The password for IMAP default: (env IMAP_PASSWORD)',
-                        # required=True,
+                        required=not os.getenv('IMAP_PASSWORD'),
                         dest='imap_password',
-                        default=os.getenv('IMAP_PASSWORD'))
+                        default=os.getenv('IMAP_PASSWORD')
+                        )
 
     parser.add_argument('--imap_mailbox', '-if',
                         help='The mailbox which should be checked',
@@ -287,14 +291,14 @@ def parse_arguments():
     parser.add_argument('--warning', '-w',
                         help='The value of warning threshold in seconds default: 300',
                         type=int,
-                        # default=300,
+                        default=300,
                         required=True,
                         dest='warning')
 
     parser.add_argument('--critical', '-c',
                         help='The value of critical threshold in seconds default: 500',
                         type=int,
-                        # default=500,
+                        default=500,
                         required=True,
                         dest='critical')
 
@@ -382,33 +386,6 @@ def parse_arguments():
 
     # TODO: fix exit code to 3 when parser error
 
-    # Environment variables, so the credentials
-    # are hidden in process from other users
-    # TODO: evaluate alternative
-    envsmtp_password = os.getenv('SMTP_PASSWORD')
-    if envsmtp_password:
-        args.smtp_password = envsmtp_password
-
-    envsmtp_username = os.getenv('SMTP_USERNAME')
-    if envsmtp_username:
-        args.smtp_user = envsmtp_username
-
-    envImapUsername = os.getenv('IMAP_USERNAME')
-    if envImapUsername:
-        args.imap_user = envImapUsername
-
-    envimap_password = os.getenv('IMAP_PASSWORD')
-    if envimap_password:
-        args.imap_password = envimap_password
-
-    envimap_sender_username = os.getenv('IMAP_SENDER_USERNAME')
-    if envimap_sender_username:
-        args.imap_sender_user = envimap_sender_username
-
-    envimap_sender_password = os.getenv('IMAP_SENDER_PASSWORD')
-    if envimap_sender_password:
-        args.imap_sender_password = envimap_sender_password
-
     return parser.parse_args()
 
 
@@ -445,6 +422,12 @@ def main():
                     STATUS_UNKNOWN)
     except gaierror as g:
         plugin_exit('SMTP Host "%s" not reachable: %s' % (conn_smtp.host, g),
+                    STATUS_UNKNOWN)
+    except smtplib.SMTPSenderRefused:
+        plugin_exit('SMTP sender has an invalid email address',
+                    STATUS_UNKNOWN)
+    except smtplib.SMTPRecipientsRefused:
+        plugin_exit('SMTP receiver has an invalid email address',
                     STATUS_UNKNOWN)
 
     else:
