@@ -175,7 +175,7 @@ class ImapConnection(object):
                 email.utils.parsedate_tz(
                     raw_email['Date']))
 
-            if reply_name and email_date_as_unix < time_cleanup:
+            if self.reply_name and email_date_as_unix < time_cleanup:
                 self.imapcon.store(message_id, '+FLAGS', '\\Deleted')
 
 
