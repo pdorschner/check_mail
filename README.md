@@ -123,7 +123,7 @@ Check_email can gather these following environment variables from the system if 
 ## Configuration
 ### Icinga 
 **IMPORTANT**
-It is necessary to set the `check_timeout` always greater than the `critical threshold` because the *default timeout* of a plugin could be exceeded and icinga kills its process. As a result, the plugin can never reach the *critical* state.
+`check_timeout` must be greater than the `critical threshold` otherwise the *default timeout* of a plugin could be exceeded and icinga kills its process. As a result, the plugin can never reach the *critical* state.
 Moreover `check_interval` has also to be lower than the `check_timeout`. Due to the fact, that the plugin *waits* for an email or rather an event, the execution time could be, in the worst case, higher than the `check_interval`. In such circumstances Icinga triggers *check_email* anew, even if the plugin did not finish correctly.
 >See *check_email.conf* for an example configuration
 
