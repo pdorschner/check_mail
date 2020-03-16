@@ -34,6 +34,11 @@ STATUS_NAMES = [
     'UNKNOWN',
 ]
 
+PORT_IMAP = 143
+PORT_IMAPS = 993
+PORT_SMTP = 25
+PORT_SMTPS = 465
+
 
 def plugin_exit(label, state=STATUS_UNKNOWN, lines=None, perfdata=None, name='check_email'):
     if state > len(STATUS_NAMES):
@@ -56,19 +61,38 @@ def plugin_exit(label, state=STATUS_UNKNOWN, lines=None, perfdata=None, name='ch
 
 class ImapConnection(object):
     def __init__(self, host, port, user, password,
-                 mailbox, mailsubject, clean):
+                 mailbox, mailsubject, clean, mode=None):
         self.host = host
-        self.port = port if port else 143
+        self.port = port if port else PORT_IMAPS
         self.user = user
         self.password = password
         self.mailbox = mailbox
         self.mailsubject = mailsubject
         self.clean = clean
 
+        # TODO: starttls only supported in Python >= 3.2
+        if mode:
+            self.mode = mode
+        elif port == PORT_IMAPS:
+            self.mode = 'ssl'
+        else:
+            self.mode = 'plain'
+
         self.imapcon = None
 
     def connect(self):
-        self.imapcon = imaplib.IMAP4_SSL(self.host, self.port)
+        """
+        connects to the IMAP server
+
+        TODO: starttls only supported in Python >= 3.2
+        :return:
+        """
+        # TODO: timeout??
+        if self.mode == 'ssl':
+            self.imapcon = imaplib.IMAP4_SSL(self.host, self.port)
+        else:
+            self.imapcon = imaplib.IMAP4(self.host, self.port)
+
         # self.imapcon.debug = 4
         self.imapcon.login(self.user, self.password)
 
@@ -159,9 +183,9 @@ class ImapConnection(object):
 
 
 class SmtpConnection(object):
-    def __init__(self, host, port, user, password, sender, receiver):
+    def __init__(self, host, port, user, password, sender, receiver, mode=None):
         self.host = host
-        self.port = port if port else 465
+        self.port = port if port else PORT_SMTPS
         self.user = user
         self.password = password
         self.sender = sender
@@ -170,11 +194,24 @@ class SmtpConnection(object):
                                              string.ascii_lowercase +
                                              string.digits) for _ in range(6))
 
+        if mode:
+            self.mode = mode
+        elif self.port == PORT_SMTPS:
+            self.mode = 'ssl'
+        else:
+            self.mode = 'tls'
+
         self.smtpcon = None
 
     def connect(self):
-        self.smtpcon = smtplib.SMTP(self.host, self.port)
-        self.smtpcon.starttls()
+        if self.mode == 'ssl':
+            self.smtpcon = smtplib.SMTP_SSL(self.host, self.port, timeout=5)
+        else:
+            self.smtpcon = smtplib.SMTP(self.host, self.port, timeout=5)
+
+        if self.mode == 'tls':
+            self.smtpcon.starttls()
+
         self.smtpcon.login(self.user, self.password)
 
     def send(self):
@@ -226,7 +263,8 @@ def parse_arguments():
 
     parser.add_argument('--imap-port', '-ip',
                         help='port of the IMAP server',
-                        type=int)
+                        type=int,
+                        default=PORT_IMAPS)
 
     parser.add_argument('--imap-user', '-iusr',
                         help='username for IMAP default: (env IMAP_USERNAME)',
@@ -273,7 +311,8 @@ def parse_arguments():
 
     reply_group.add_argument('--imap-sender-port',
                              help='port of the IMAP server which sent the mail',
-                             type=int)
+                             type=int,
+                             default=PORT_IMAPS)
 
     reply_group.add_argument('--imap-sender-user',
                              help='username for IMAP, which receive the echo reply, default:(env IMAP_SENDER_USER)',
