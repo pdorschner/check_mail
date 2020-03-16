@@ -58,7 +58,7 @@ class ImapConnection(object):
     def __init__(self, host, port, user, password,
                  mailbox, mailsubject, clean):
         self.host = host
-        self.port = port
+        self.port = port if port else 143
         self.user = user
         self.password = password
         self.mailbox = mailbox
@@ -161,7 +161,7 @@ class ImapConnection(object):
 class SmtpConnection(object):
     def __init__(self, host, port, user, password, sender, receiver):
         self.host = host
-        self.port = port
+        self.port = port if port else 465
         self.user = user
         self.password = password
         self.sender = sender
@@ -208,8 +208,7 @@ def parse_arguments():
 
     parser.add_argument('--smtp-port', '-sp',
                         help='port of the SMTP server',
-                        type=int,
-                        required=True)
+                        type=int)
 
     parser.add_argument('--smtp-user', '-susr',
                         help='username for SMTP default: (env SMTP_USERNAME)',
@@ -227,7 +226,6 @@ def parse_arguments():
 
     parser.add_argument('--imap-port', '-ip',
                         help='port of the IMAP server',
-                        required=True,
                         type=int)
 
     parser.add_argument('--imap-user', '-iusr',
@@ -242,7 +240,6 @@ def parse_arguments():
 
     parser.add_argument('--imap-mailbox', '-if',
                         help='mailbox which should be checked',
-                        required=True,
                         default='INBOX')
 
     parser.add_argument('--sender',
@@ -256,14 +253,12 @@ def parse_arguments():
     parser.add_argument('--warning', '-w',
                         help='value of warning threshold in seconds default: 300',
                         type=int,
-                        default=300,
-                        required=True)
+                        default=300)
 
     parser.add_argument('--critical', '-c',
                         help='value of critical threshold in seconds default: 500',
                         type=int,
-                        default=500,
-                        required=True)
+                        default=500)
 
     reply_group = parser.add_argument_group('If an echo reply is configured on the receiver mail server')
 
