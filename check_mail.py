@@ -20,54 +20,37 @@ except Exception as e:
     print("UNKNOWN: Failure during import: %s" % e.message)
     sys.exit(3)
 
-__version__ = '0.1'
+__version__ = '0.1.0'
 
 # Icinga states
 STATUS_OK = 0
 STATUS_WARNING = 1
 STATUS_CRITICAL = 2
 STATUS_UNKNOWN = 3
+STATUS_NAMES = [
+    'OK',
+    'WARNING',
+    'CRITICAL',
+    'UNKNOWN',
+]
 
 
-def plugin_exit(label,
-                state=STATUS_OK,
-                lines=None,
-                perfdata=None,
-                name='check_email'):
+def plugin_exit(label, state=STATUS_UNKNOWN, lines=None, perfdata=None, name='check_email'):
+    if state > len(STATUS_NAMES):
+        raise RuntimeError('State programming error')
 
-    if lines is None:
-        lines = []
-    if perfdata is None:
-        perfdata = {}
+    print('%s - %s: %s' % (STATUS_NAMES[state], name, str(label)))
 
-    pluginoutput = ''
-
-    if state == 0:
-        pluginoutput += 'OK'
-    elif state == 1:
-        pluginoutput += 'WARNING'
-    elif state == 2:
-        pluginoutput += 'CRITICAL'
-    elif state == 3:
-        pluginoutput += 'UNKNOWN'
-    else:
-        raise RuntimeError('ERROR: State programming error.')
-
-    pluginoutput += ' - '
-
-    pluginoutput += name + ': ' + str(label)
-
-    if len(lines):
-        pluginoutput += ' - '
-        pluginoutput += ' '.join(lines)
+    if lines:
+        for line in lines:
+            print(line)
 
     if perfdata:
-        pluginoutput += '|'
-        pluginoutput += ' '.join(["'" + key + "'" + '=' +
-                                 str(value) for key, value in
-                                 perfdata.items()])
+        output = '| '
+        for key, value in perfdata.items():
+            output += "'%s'=%s\n" % (key, value)
+        print(output)
 
-    print(pluginoutput)
     sys.exit(state)
 
 
@@ -82,6 +65,8 @@ class ImapConnection(object):
         self.mailsubject = mailsubject
         self.clean = clean
 
+        self.imapcon = None
+
     def connect(self):
         self.imapcon = imaplib.IMAP4_SSL(self.host, self.port)
         # self.imapcon.debug = 4
@@ -91,23 +76,19 @@ class ImapConnection(object):
         self.imapcon.close()
         self.imapcon.logout()
 
-    def decode_header(self, raw_email, header_type):
-        self.raw_email = raw_email
-        self.header_type = header_type
+    @staticmethod
+    def decode_header(raw_email, header_type):
         parsed_header = email.header.decode_header(
-            self.raw_email[self.header_type])[0]
+            raw_email[header_type])[0]
 
         parsed_header = unicode(parsed_header[0])
         return parsed_header
 
     def search_mail(self, warning, critical, cleanup_time):
-        self.warning = warning
-        self.critical = critical
-
         # time_crit defines the critical threshold
-        time_crit = time.time() + self.critical
+        time_crit = time.time() + critical
         # time_warn defines the warning threshold
-        time_warn = time.time() + self.warning
+        time_warn = time.time() + warning
 
         while True:
             self.imapcon.select(self.mailbox)
@@ -126,13 +107,12 @@ class ImapConnection(object):
                         raw_email['Date']))
 
                 if self.clean:
-                    self.cleanup_time = cleanup_time
                     # time_cleanup deletes mails older then 1 hour
-                    time_cleanup = time.time() - int(self.cleanup_time)
+                    time_cleanup = time.time() - int(cleanup_time)
                     if email_date_as_unix < time_cleanup and email_customtag == 'Email-Check-Icinga':
                         self.imapcon.store(message_id, '+FLAGS', '\\Deleted')
 
-                if (self.mailsubject in email_subject):
+                if self.mailsubject in email_subject:
                     # Actual timestamp of received email has to be parsed.
                     # 'Received' field contains a (possibly empty) list of
                     # name/value pairs followed by a semicolon and a date-time
@@ -162,7 +142,6 @@ class ImapConnection(object):
                 time.sleep(5)
 
     def cleanup(self, reply_name, cleanup_time):
-        self.reply_name = reply_name
         self.imapcon.select(self.mailbox)
         time_cleanup = time.time() - cleanup_time
 
@@ -175,7 +154,7 @@ class ImapConnection(object):
                 email.utils.parsedate_tz(
                     raw_email['Date']))
 
-            if self.reply_name and email_date_as_unix < time_cleanup:
+            if reply_name and email_date_as_unix < time_cleanup:
                 self.imapcon.store(message_id, '+FLAGS', '\\Deleted')
 
 
@@ -190,6 +169,8 @@ class SmtpConnection(object):
         self.subject = ''.join(random.choice(string.ascii_uppercase +
                                              string.ascii_lowercase +
                                              string.digits) for _ in range(6))
+
+        self.smtpcon = None
 
     def connect(self):
         self.smtpcon = smtplib.SMTP(self.host, self.port)
@@ -209,157 +190,132 @@ class SmtpConnection(object):
 
         return time_send
 
-    def disconnect_smtp(self):
+    def disconnect(self):
         self.smtpcon.quit()
+        self.smtpcon = None
 
 
 def parse_arguments():
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-V', '--version',
                         action='version',
-                        version='%(prog)s v' +
-                        sys.modules[__name__].__version__)
+                        version='%(prog)s v' + __version__)
 
-    parser.add_argument('--smtp_host', '-sh',
-                        help='The host address or FQDN of the SMTP server',
-                        required=True,
-                        dest='smtp_host')
+    parser.add_argument('--smtp-host', '-sh',
+                        help='host address or FQDN of the SMTP server',
+                        required=True)
 
-    parser.add_argument('--smtp_port', '-sp',
-                        help='The port of the SMTP server',
+    parser.add_argument('--smtp-port', '-sp',
+                        help='port of the SMTP server',
                         type=int,
-                        required=True,
-                        dest='smtp_port')
+                        required=True)
 
-    parser.add_argument('--smtp_user', '-susr',
-                        help='The username for SMTP default: (env SMTP_USERNAME)',
+    parser.add_argument('--smtp-user', '-susr',
+                        help='username for SMTP default: (env SMTP_USERNAME)',
                         required=not os.getenv('SMTP_USERNAME'),
-                        default=os.getenv('SMTP_USERNAME'),
-                        dest='smtp_user'
-                        )
+                        default=os.getenv('SMTP_USERNAME'))
 
-    parser.add_argument('--smtp_password', '-spw',
-                        help='The password for SMTP default: (env SMTP_PASSWORD)',
-                        required= not os.getenv('SMTP_PASSWORD'),
-                        default=os.getenv('SMTP_PASSWORD'),
-                        dest='smtp_password',
-                        )
+    parser.add_argument('--smtp-password', '-spw',
+                        help='password for SMTP default: (env SMTP_PASSWORD)',
+                        required=not os.getenv('SMTP_PASSWORD'),
+                        default=os.getenv('SMTP_PASSWORD'))
 
-    parser.add_argument('--imap_host', '-ih',
-                        help='The host address or FQDN of the IMAP server',
+    parser.add_argument('--imap-host', '-ih',
+                        help='host address or FQDN of the IMAP server',
+                        required=True)
+
+    parser.add_argument('--imap-port', '-ip',
+                        help='port of the IMAP server',
                         required=True,
-                        dest='imap_host')
+                        type=int)
 
-    parser.add_argument('--imap_port', '-ip',
-                        help='The port of the IMAP server',
-                        required=True,
-                        type=int,
-                        dest='imap_port')
-
-    parser.add_argument('--imap_user', '-iusr',
-                        help='The username for IMAP default: (env IMAP_USERNAME)',
+    parser.add_argument('--imap-user', '-iusr',
+                        help='username for IMAP default: (env IMAP_USERNAME)',
                         required=not os.getenv('IMAP_USERNAME'),
-                        default=os.getenv('IMAP_USERNAME'),
-                        dest='imap_user',
-                        )
+                        default=os.getenv('IMAP_USERNAME'))
 
-    parser.add_argument('--imap_password', '-ipw',
-                        help='The password for IMAP default: (env IMAP_PASSWORD)',
+    parser.add_argument('--imap-password', '-ipw',
+                        help='password for IMAP default: (env IMAP_PASSWORD)',
                         required=not os.getenv('IMAP_PASSWORD'),
-                        dest='imap_password',
-                        default=os.getenv('IMAP_PASSWORD')
-                        )
+                        default=os.getenv('IMAP_PASSWORD'))
 
-    parser.add_argument('--imap_mailbox', '-if',
-                        help='The mailbox which should be checked',
+    parser.add_argument('--imap-mailbox', '-if',
+                        help='mailbox which should be checked',
                         required=True,
-                        default='INBOX',
-                        dest='imap_mailbox')
+                        default='INBOX')
 
     parser.add_argument('--sender',
                         help='Sender email e.g. "sender@mail.com"',
-                        required=True,
-                        dest='sender')
+                        required=True)
 
     parser.add_argument('--receiver',
                         help='Receiver email e.g. "receiver@mail.com"',
-                        required=True,
-                        dest='receiver')
+                        required=True)
 
     parser.add_argument('--warning', '-w',
-                        help='The value of warning threshold in seconds default: 300',
+                        help='value of warning threshold in seconds default: 300',
                         type=int,
                         default=300,
-                        required=True,
-                        dest='warning')
+                        required=True)
 
     parser.add_argument('--critical', '-c',
-                        help='The value of critical threshold in seconds default: 500',
+                        help='value of critical threshold in seconds default: 500',
                         type=int,
                         default=500,
-                        required=True,
-                        dest='critical')
+                        required=True)
 
     reply_group = parser.add_argument_group('If an echo reply is configured on the receiver mail server')
 
-    reply_group.add_argument('--echo_reply',
-                             help='Checks for echo reply from mail server, default: False',
-                             default=False,
-                             action='store_true',
-                             dest='echo_reply')
+    reply_group.add_argument('--echo-reply',
+                             help='Checks for echo reply from mail server',
+                             action='store_true')
 
-    reply_group.add_argument('--imap_sender_host',
-                             help='The host address or FQDN of the IMAP server which sent the mail',
-                             dest='imap_sender_host')
+    # TODO: by default same IMAP account?
 
-    reply_group.add_argument('--imap_sender_port',
-                             help='The port of the IMAP server which sent the mail',
-                             type=int,
-                             dest='imap_sender_port')
+    reply_group.add_argument('--imap-sender-host',
+                             help='host address or FQDN of the IMAP server which sent the mail')
 
-    reply_group.add_argument('--imap_sender_user',
-                             help='The username for IMAP, which receive the echo reply, default:(env IMAP_SENDER_USER)',
-                             dest='imap_sender_user',
+    reply_group.add_argument('--imap-sender-port',
+                             help='port of the IMAP server which sent the mail',
+                             type=int)
+
+    reply_group.add_argument('--imap-sender-user',
+                             help='username for IMAP, which receive the echo reply, default:(env IMAP_SENDER_USER)',
                              default=os.getenv('IMAP_SENDER_USER'))
 
-    reply_group.add_argument('--imap_sender_password',
-                             help='The password for IMAP user, which receive the echo reply, default:(env IMAP_SENDER_PASSWORD)',
-                             dest='imap_sender_password',
+    reply_group.add_argument('--imap-sender-password',
+                             help='password for IMAP user, which receive the echo reply,'
+                                  + 'default:(env IMAP_SENDER_PASSWORD)',
                              default=os.getenv('IMAP_SENDER_PASSWORD'))
 
-    reply_group.add_argument('--imap_sender_mailbox',
-                             help='The mailbox which should be checked for echo reply',
-                             dest='imap_sender_mailbox')
+    reply_group.add_argument('--imap-sender-mailbox',
+                             help='mailbox which should be checked for echo reply',
+                             default='INBOX')
 
-    reply_group.add_argument('--critical_reply',
-                             help='The critical threshold for echo reply',
-                             type=int,
-                             dest='critical_reply')
+    # TODO: defaults?
 
-    reply_group.add_argument('--warning_reply',
-                             help='The warning threshold for echo reply',
-                             type=int,
-                             dest='warning_reply')
+    reply_group.add_argument('--critical-reply',
+                             help='critical threshold for echo reply',
+                             type=int)
 
-    cleanup_group = parser.add_argument_group('Use these arguments to cleanup sent mails/echo replys')
+    reply_group.add_argument('--warning-reply',
+                             help='warning threshold for echo reply',
+                             type=int)
+
+    cleanup_group = parser.add_argument_group('Use these arguments to cleanup sent mails/echo replies')
 
     cleanup_group.add_argument('--cleanup',
                                help='Deletes old mails, default: False',
-                               default=False,
-                               action='store_true',
-                               dest='cleanup')
+                               action='store_true')
 
     cleanup_group.add_argument('--cleanup_time',
                                help='Deletes mails older then x seconds, default: 3600',
                                type=int,
-                               default=3600,
-                               dest='cleanup_time')
+                               default=3600)
 
     cleanup_group.add_argument('--reply_name',
-                               help='Specifies the name the of the echo reply, e.g. "My Echo"',
-                               dest='reply_name')
+                               help='Specifies the name the of the echo reply, e.g. "My Echo"')
 
     args = parser.parse_args()
 
@@ -371,7 +327,10 @@ def parse_arguments():
                             args.imap_sender_mailbox is None or
                             args.critical_reply is None or
                             args.warning_reply is None):
-        parser.error('The --echo_reply argument requires: --imap_sender_host, --imap_sender_port, --imap_sender_user, --imap_sender_password, --imap_sender_mailbox, --warning_reply, --critical_reply')
+        parser.error(
+            'The --echo-reply argument requires all arguments of:\n'
+            + '--imap-sender-host, --imap-sender-port, --imap-sender-user, --imap-sender-password,'
+            + ' --imap-sender-mailbox, --warning-reply, --critical-reply')
 
     if (args.echo_reply and args.cleanup) and (args.imap_sender_host is None or
                                                args.imap_sender_port is None or
@@ -379,12 +338,10 @@ def parse_arguments():
                                                args.imap_sender_password is None or
                                                args.imap_sender_mailbox is None or
                                                args.reply_name is None):
-        parser.error('The --cleanup together with --echo_reply argument requires: --reply_name')
+        parser.error('The --cleanup together with --echo-reply argument requires: --reply-name')
 
     if args.cleanup and args.cleanup_time is None:
-        parser.error('The --cleanup argument requires: --cleanup_time')
-
-    # TODO: fix exit code to 3 when parser error
+        parser.error('The --cleanup argument requires: --cleanup-time')
 
     return parser.parse_args()
 
@@ -392,8 +349,8 @@ def parse_arguments():
 def main():
     try:
         parsed = parse_arguments()
-    except SystemExit:
-        sys.exit(STATUS_UNKNOWN)
+    except argparse.ArgumentError as err:
+        plugin_exit('Error in arguments: %s' % err, STATUS_UNKNOWN)
 
     state_remote_imap = STATUS_UNKNOWN
     state_reply_imap = STATUS_UNKNOWN
@@ -412,10 +369,10 @@ def main():
         subject = conn_smtp.subject
         conn_smtp.connect()
         time_send = conn_smtp.send()
-        conn_smtp.disconnect_smtp()
+        conn_smtp.disconnect()
 
-    except smtplib.SMTPConnectError as e:
-        plugin_exit('SMTP Connection Error: %s' % e[1],
+    except smtplib.SMTPConnectError as err:
+        plugin_exit('SMTP Connection Error: %s' % err[1],
                     STATUS_UNKNOWN)
     except smtplib.SMTPAuthenticationError as a:
         plugin_exit('SMTP Authentication Error: %s' % a[1],
@@ -466,8 +423,8 @@ def main():
 
             conn_remote_imap.disconnect_imap()
 
-        except imaplib.IMAP4.error as e:
-            plugin_exit('IMAP: %s' % e,
+        except imaplib.IMAP4.error as err:
+            plugin_exit('IMAP: %s' % err,
                         STATUS_UNKNOWN)
         except gaierror as g:
             plugin_exit('IMAP Host "%s" not reachable: %s' % (conn_remote_imap.host, g),
@@ -517,12 +474,12 @@ def main():
 
                     conn_sender_imap.disconnect_imap()
 
-                except imaplib.IMAP4.error as e:
-                    if str(e) == 'command SEARCH illegal in state AUTH, only allowed in states SELECTED':
+                except imaplib.IMAP4.error as err:
+                    if str(err) == 'command SEARCH illegal in state AUTH, only allowed in states SELECTED':
                         plugin_exit('IMAP: Given Mailbox is not available',
                                     STATUS_UNKNOWN)
                     else:
-                        plugin_exit('IMAP: %s' % e, STATUS_UNKNOWN)
+                        plugin_exit('IMAP: %s' % err, STATUS_UNKNOWN)
                 except gaierror as g:
                     plugin_exit('IMAP Host "%s" not reachable: %s' % (conn_remote_imap.host, g),
                                 STATUS_UNKNOWN)
