@@ -100,14 +100,6 @@ class ImapConnection(object):
         self.imapcon.close()
         self.imapcon.logout()
 
-    @staticmethod
-    def decode_header(raw_email, header_type):
-        parsed_header = email.header.decode_header(
-            raw_email[header_type])[0]
-
-        parsed_header = unicode(parsed_header[0])
-        return parsed_header
-
     def search_mail(self, warning, critical, cleanup_time):
         # time_crit defines the critical threshold
         time_crit = time.time() + critical
@@ -121,16 +113,18 @@ class ImapConnection(object):
             for message_id in message_data[0].split():
                 return_value, message_data = self.imapcon.fetch(
                     message_id, '(RFC822)')
-                raw_email = email.message_from_string(message_data[0][1])
+                raw_email = email.message_from_string(message_data[0][1])  # type: email.message.Message
 
                 # TODO: Refactor
-                email_subject = self.decode_header(raw_email, 'Subject')
-                email_customtag = self.decode_header(raw_email, 'X-Custom-Tag')
-                email_date_as_unix = email.utils.mktime_tz(
-                    email.utils.parsedate_tz(
-                        raw_email['Date']))
+                email_subject = raw_email.get('Subject')
+                email_customtag = raw_email.get('X-Custom-Tag')
 
-                if self.clean:
+                # TODO: Date header is not required
+                if self.clean and 'Date' in raw_email:
+                    email_date_as_unix = email.utils.mktime_tz(
+                        email.utils.parsedate_tz(
+                            raw_email['Date']))
+
                     # time_cleanup deletes mails older then 1 hour
                     time_cleanup = time.time() - int(cleanup_time)
                     if email_date_as_unix < time_cleanup and email_customtag == 'Email-Check-Icinga':
@@ -145,8 +139,7 @@ class ImapConnection(object):
                     # (RFC 2822 | 3.6.7)
                     # TODO: regex is very expensive
                     # search an alternative solution
-                    email_server_date_as_unix = self.decode_header(raw_email,
-                                                                   'Received')
+                    email_server_date_as_unix = raw_email['Received']
                     match = re.search(r";\s(.*)", email_server_date_as_unix)
 
                     if match:
