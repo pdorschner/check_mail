@@ -13,6 +13,7 @@ try:
     import email.message
     import email.header
     import re
+    import socket
 
     from email.mime.text import MIMEText
     from socket import gaierror, error as socketerror
@@ -87,7 +88,8 @@ class ImapConnection(object):
         TODO: starttls only supported in Python >= 3.2
         :return:
         """
-        # TODO: timeout??
+        # Set global timeout for conncetions
+        socket.setdefaulttimeout(5)
         if self.mode == 'ssl':
             self.imapcon = imaplib.IMAP4_SSL(self.host, self.port)
         else:
@@ -197,10 +199,12 @@ class SmtpConnection(object):
         self.smtpcon = None
 
     def connect(self):
+        # Set global timeout for conncetions
+        socket.setdefaulttimeout(5)
         if self.mode == 'ssl':
-            self.smtpcon = smtplib.SMTP_SSL(self.host, self.port, timeout=5)
+            self.smtpcon = smtplib.SMTP_SSL(self.host, self.port)
         else:
-            self.smtpcon = smtplib.SMTP(self.host, self.port, timeout=5)
+            self.smtpcon = smtplib.SMTP(self.host, self.port)
 
         if self.mode == 'tls':
             self.smtpcon.starttls()
@@ -336,12 +340,12 @@ def parse_arguments():
                                help='Deletes old mails, default: False',
                                action='store_true')
 
-    cleanup_group.add_argument('--cleanup_time',
+    cleanup_group.add_argument('--cleanup-time',
                                help='Deletes mails older then x seconds, default: 3600',
                                type=int,
                                default=3600)
 
-    cleanup_group.add_argument('--reply_name',
+    cleanup_group.add_argument('--reply-name',
                                help='Specifies the name the of the echo reply, e.g. "My Echo"')
 
     args = parser.parse_args()
