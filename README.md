@@ -8,8 +8,8 @@ Check_email offers three modes:
 ## Standard
 In the standard mode *(default)*, the plugin sends an email with an unique (hash) subject and *X-Custom-Tag*, via SMTP, to the specified email-address. Afterwards the plugin connects via IMAP to the given mail account and searches in the given mailbox for the before sent email. Dependent on the thresholds, the plugin searches through the mailbox until the critical threshold is exceeded.<br>
 The required arguments are:<br>
-      `--imap_host` `--imap_port` `--imap_user` `--imap_password` `--imap_mailbox`<br>
-      `--smtp_host` `--smtp_port` `--smtp_user` `--smtp_password` `--sender` `--receiver`<br>
+      `--imap-host` `--imap-port` `--imap-user` `--imap-password` `--imap-mailbox`<br>
+      `--smtp-host` `--smtp-port` `--smtp-user` `--smtp-password` `--sender` `--receiver`<br>
       `--critical`   `--warning`
 
 ## Echo reply
@@ -17,18 +17,18 @@ The *--echo_reply* mode extends the standard mode to search for an *echo-mail*. 
 >NOTE: This *echo function* has to be configured on the mail server.
 
 The additional required arguments are:<br>
-      `--echo_reply`<br>
-      `--imap_sender_host` `--imap_sender_port` `--imap_sender_user` `--imap_sender_password` `--imap_sender_mailbox`<br>
-      `--critical_reply`     `--warning_reply`
+      `--echo-reply`<br>
+      `--imap-sender_host` `--imap-sender-port` `--imap-sender-user` `--imap-sender-password` `--imap-sender-mailbox`<br>
+      `--critical-reply`     `--warning-reply`
 
 ## Clean up
 In order to avoid a full mailbox of *echo-mails* and *check-mails*, there is an option *--cleanup* to sweep away the previous mentioned emails.
->Use this option with caution, it cloud delete involuntary emails if the wrong *--imap_mailbox*, *--imap_sender_mailbox* or *--reply_name* is specified!
+>Use this option with caution, it cloud delete involuntary emails if the wrong *--imap-mailbox*, *--imap-sender-mailbox* or *--reply-name* is specified!
 
 The additional required arguments are:<br>
       `--cleanup`<br>
-      `--cleanup_time`<br>
-      `--reply_name`
+      `--cleanup-time`<br>
+      `--reply-name`
 
 ### Optional: environment variables
 Check_email can gather these following environment variables from the system if they are set:
@@ -42,20 +42,20 @@ Check_email can gather these following environment variables from the system if 
 >NOTE: It's currently not implemented to define more than one of each *SMTP*, *IMAP* and *IMAP_SENDER*
 
 # Usage
-	usage: check_mail.py [-h] [-V] --smtp_host SMTP_HOST --smtp_port SMTP_PORT
-                     [--smtp_user SMTP_USER] [--smtp_password SMTP_PASSWORD]
-                     --imap_host IMAP_HOST --imap_port IMAP_PORT
-                     [--imap_user IMAP_USER] [--imap_password IMAP_PASSWORD]
-                     --imap_mailbox IMAP_MAILBOX --sender SENDER --receiver
+	usage: check_mail.py [-h] [-V] --smtp-host SMTP_HOST --smtp-port SMTP_PORT
+                     [--smtp-user SMTP_USER] [--smtp-password SMTP_PASSWORD]
+                     --imap-host IMAP_HOST --imap-port IMAP_PORT
+                     [--imap-user IMAP_USER] [--imap-password IMAP_PASSWORD]
+                     --imap-mailbox IMAP_MAILBOX --sender SENDER --receiver
                      RECEIVER --warning WARNING --critical CRITICAL
-                     [--echo_reply] [--imap_sender_host IMAP_SENDER_HOST]
-                     [--imap_sender_port IMAP_SENDER_PORT]
-                     [--imap_sender_user IMAP_SENDER_USER]
-                     [--imap_sender_password IMAP_SENDER_PASSWORD]
-                     [--imap_sender_mailbox IMAP_SENDER_MAILBOX]
-                     [--critical_reply CRITICAL_REPLY]
-                     [--warning_reply WARNING_REPLY] [--cleanup]
-                     [--cleanup_time CLEANUP_TIME] [--reply_name REPLY_NAME]
+                     [--echo-reply] [--imap-sender-host IMAP_SENDER_HOST]
+                     [--imap-sender-port IMAP_SENDER_PORT]
+                     [--imap-sender-user IMAP_SENDER_USER]
+                     [--imap-sender-password IMAP_SENDER_PASSWORD]
+                     [--imap-sender-mailbox IMAP_SENDER_MAILBOX]
+                     [--critical-reply CRITICAL_REPLY]
+                     [--warning-reply WARNING_REPLY] [--cleanup]
+                     [--cleanup-time CLEANUP_TIME] [--reply-name REPLY_NAME]
 
 ## Standard mode example without cleanup
 	./check_mail.py -sh='mail.example.com' \
@@ -68,7 +68,7 @@ Check_email can gather these following environment variables from the system if 
 			-iusr='receiver@example.de' \
 			-ipw='***' \
 			--receiver='receiver@example.de' \
-			--imap_mailbox='Monitoring' \
+			--imap-mailbox='Monitoring' \
 			-w=300 \
 			-c=500
 >1. The plugin connects to *mail.example.com*, creates an unique hash subject and sends an email to *receiver@example.com*
@@ -89,22 +89,22 @@ Check_email can gather these following environment variables from the system if 
 			-ih='imap.example.com' \
 			-ip=993 \
 			-iusr='receiver@example.com' \
-			-ipw='xxx'\
+			-ipw='***'\
 			--receiver='receiver@example.com' \
-			--imap_mailbox='Monitoring' \
+			--imap-mailbox='Monitoring' \
 			-w=300 \
 			-c=500 \
-			--echo_reply \
-			--imap_sender_host='imap.sender.example.com' \
-			--imap_sender_port=993 \
-			--imap_sender_user='DOMAIN\User' \
-			--imap_sender_password='***' \
-			--imap_sender_mailbox='Monitoring' \
-			--reply_name='Echo Notify' \
-			--warning_reply=300 \
-			--critical_reply=500 \
+			--echo-reply \
+			--imap-sender-host='imap.sender.example.com' \
+			--imap-sender-port=993 \
+			--imap-sender-user='DOMAIN\User' \
+			--imap-sender-password='***' \
+			--imap-sender-mailbox='Monitoring' \
+			--reply-name='Echo Notify' \
+			--warning-reply=300 \
+			--critical-reply=500 \
 			--cleanup \
-			--cleanup_time=300
+			--cleanup-time=300
 >1. The plugin connects to *mail.example.com*, creates an unique hash subject and sends an email to *receiver@example.com*.
 >2. The plugin connects to *imap.example.com*, searches trough the mailbox *Monitoring*. Additionally, emails with the *X-Custom-Tag* and if they are older then 300 seconds, will be deleted. 
 >3. If the email cannot be found in 300 seconds, the state will be WARNING
